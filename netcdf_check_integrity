@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+# Utility which uses cdo to check data integrity for files
+#
+# 2017 Leif Denby, GPL-3
+
+
+command_exists () {
+    type "$1" &> /dev/null ;
+}
+
+function checkfile {
+  filename=$1
+
+  printf "."
+
+  nice -n 20 cdo info $1 > /dev/null 2>&1
+
+  result=$?
+  if [ ! $result -eq 0 ]; then
+      echo ""
+      echo "Integrity check failed for $1: $result"
+  fi
+  return $result
+}
+export -f checkfile
+
+if command_exists cdo ; then
+    has_cdo=1
+else
+    echo "Can't find cdo in PATH, please make sure it is available"
+    exit 1
+fi
+
+if [ "$#" -lt 1 ]; then
+    echo "usage: $0 filename.nc [filename2.nc, ...]"
+    echo
+    echo "   filename.nc: file to check"
+    echo
+    echo "   works with wildcards too, e.g. $0 rico_*.nc"
+    exit 1
+else
+    echo "Checking $# files"
+
+    printf "%s\n" "$@" | xargs -I{} bash -c "checkfile {} || exit 255"
+fi
